@@ -4,7 +4,7 @@ require "MailchimpMarketing"
 require "digest"
 require "./secret"  # load secret parameter keys
 require "./config"  # load config parameters
-require "./get_townnews_csv_data.rb"
+require "./get_newzware_csv_data.rb"
 
 ##################################################################
 ### CONNECT TO MAILCHIMP
@@ -67,7 +67,8 @@ def get_interest_id_of_name(client, list_id, group_name, interest_name)
 end
 
 def member_exists_in_list?(client, list_id, member_data)
-  response = client.lists.get_list_member(list_id, member_data["user_email"])
+  #puts member_data.inspect
+  response = client.lists.get_list_member(list_id, member_data["em_email"])
   return true
 
   rescue MailchimpMarketing::ApiError => e
@@ -96,103 +97,35 @@ def add_group_interest(client, list_id, group_name, interest_name)
 end
 
 ##################################################################
-### NAME & ADDRESS funtions
+### ADDRESS funtions
 ##################################################################
-def get_first_name(member_data)
-  if member_data["user_firstname"].nil?
-    if member_data["name"].nil?
-      return ""
-    else
-      if member_data["name"].split.count > 1
-        return member_data["name"].split.first
-      else
-        return member_data["name"]
-      end
-    end
-  else
-    return member_data["user_firstname"]
-  end
-end
-
-def get_last_name(member_data)
-  if member_data["user_lastname"].nil?
-    if member_data["name"].nil?
-      return ""
-    else
-      if member_data["name"].split.count > 1
-        return member_data["name"].split.last
-      else
-        return member_data["name"]
-      end
-    end
-  else
-    return member_data["user_lastname"]
-  end
-end
 
 def get_address(member_data)
-  if !member_data["user_address"].nil?
-    return member_data["user_address"].strip
-  else
-    if !member_data["postal_address"].nil?
-      return member_data["postal_address"].strip
-    else
-      return ""
-    end
+  address = ""
+  if member_data.key?("addr1")
+    address = member_data['addr1']
   end
-end
-
-def get_city(member_data)
-  if !member_data["user_municipality"].nil?
-    return member_data["user_municipality"].strip
-  else
-    if !member_data["postal_city"].nil?
-      return member_data["postal_city"].strip
-    else
-      return ""
-    end
+  if member_data.key?("addr2")
+    address = address + "," + member_data['addr2'] unless member_data['addr2'].empty?
   end
-end
-
-def get_state(member_data)
-  if !member_data["user_region"].nil?
-    return member_data["user_region"].strip
-  else
-    if !member_data["postal_state"].nil?
-      return member_data["postal_state"].strip
-    else
-      return ""
-    end
-  end
-end
-
-def get_zipcode(member_data)
-  if !member_data["user_postcode"].nil?
-    return member_data["user_postcode"].strip
-  else
-    if !member_data["postal_postcode"].nil?
-      return member_data["postal_postcode"].strip
-    else
-      return ""
-    end
-  end
+  return address
 end
 
 def get_full_address(member_data)
   # returns full address of member formatted properly
   full_addr = ""
-  if member_data.key?("user_address")
+  if member_data.key?("addr1")
     full_addr = get_address(member_data)
     full_addr = full_addr + "," unless get_address(member_data).empty?
   end
-  if member_data.key?("user_municipality")
-    full_addr = full_addr + " " + get_city(member_data) unless get_address(member_data).empty?
+  if member_data.key?("ad_city")
+    full_addr = full_addr + " " + member_data['ad_city'] unless member_data['ad_city'].empty?
   end
-  if member_data.key?("state")
-    full_addr = full_addr + " " + get_state(member_data) unless get_address(member_data).empty?
+  if member_data.key?("ad_state")
+    full_addr = full_addr + " " + member_data['ad_state'] unless member_data['ad_state'].empty?
   end
-  if member_data.key?("zipcode")
-    full_addr = full_addr + " " + get_zipcode(member_data) unless get_address(member_data).empty?
+  if member_data.key?("ad_zip")
+    full_addr = full_addr + " " + member_data['ad_zip'] unless member_data['ad_zip'].empty?
   end
   return full_addr.strip
 end
@@ -200,43 +133,41 @@ end
 ##################################################################
 ### MAILCHIMP UPDATE functions
 ##################################################################
-def merge_townnews_users_and_subscribers(townnews_users,townnews_subscribers)
+def merge_newzware_users_and_subscribers(newzware_users,newzware_subscribers)
   # merges registered users and subscriber into single array for importing to MailChimp
-  townnews_users_and_subscribers = townnews_subscribers
+  newzware_users_and_subscribers = newzware_subscribers
   
-  townnews_users.each do |user|
-    #search townnews_users array for additional registered-only records
-    user_in_subscriber_array = townnews_subscribers.find{|a| a['user_email'] == user['email']}
+  newzware_users.each do |user|
+    #search newzware_users array for additional registered-only records
+    user_in_subscriber_array = newzware_subscribers.find{|a| a['em_email'] == user['email']}
     if user_in_subscriber_array.nil?  # user was not a subscriber thus only registering, add to array
-      townnews_users_and_subscribers.push(['','',user['last_name'],user['first_name'],'',user['email'],user['address'],'','',user['phone'],user['postal_code'],'','',ENV['TOWNNEWS_REGISTERED_GROUP_NAME'],'','','','','','','','','','','','','','','','1','','',user['creationdate']])
+puts "\n" + user['email'] + " not in subscriber file"
+      newzware_users_and_subscribers.push("",user['fname'],user['lname'],user['email'],"","","","","","",user['user_type'],user['rr_edition'],user['created'],"","",user['created'],"","","","")
     else
       # already in subscriber file, dont add again
     end
+puts user.inspect
+puts newzware_users_and_subscribers.length
+puts newzware_users_and_subscribers[newzware_users_and_subscribers.length-1].inspect
+puts newzware_users_and_subscribers[newzware_users_and_subscribers.length-1]['email']
+exit
   end
-  return townnews_users_and_subscribers
+  return newzware_users_and_subscribers
 end
 
 def subscriber?(member_data)
   # returns whether member is a subscriber
-  if ENV['TOWNNEWS_SUBSCRIPTION_NAMES'].include? member_data["service_name"]
-    return 'YES'
-  else
+  subscription_names = eval ENV['SUBSCRIPTION_NAMES']
+  if subscription_names[member_data["rr_del_meth"]].nil?  # ENV['SUBSCRIPTION_NAMES'] doesnt have a value
     return 'NO'
-  end
-end
-
-def digital_subscription?(member_data)
-  # returns whether member has a digital subscription
-  if ENV['TOWNNEWS_DIGITAL_SUBSCRIPTION_NAMES'].include? member_data["service_name"]
-    return 'YES'
   else
-    return 'NO'
+    return 'YES'
   end
 end
 
 def activate_member_marketing_groups(client, list_id, member_data)
   # new members will be activated for all marketing 'groups'
-  email = Digest::MD5.hexdigest member_data["user_email"].downcase
+  email = Digest::MD5.hexdigest member_data["em_email"].downcase
   if member_exists_in_list?(client, list_id, member_data)
     group_id = get_group_id_of_name(client, list_id, ENV['MAILCHIMP_MARKETING_GROUP_NAME'])
     #puts group_id
@@ -249,7 +180,7 @@ def activate_member_marketing_groups(client, list_id, member_data)
     # activate marketing groups
     member = client.lists.update_list_member(
         list_id,
-        member_data["user_email"],
+        member_data["em_email"],
         :interests => interests_hash_to_set
     )
     #puts member
@@ -287,7 +218,7 @@ def activate_default_newsletter_groups(client, list_id, member_data, group_name)
     # activate marketing groups
     member = client.lists.update_list_member(
         list_id,
-        member_data["user_email"],
+        member_data["em_email"],
         :interests => interests_hash_to_set
     )
     puts "     Default newsletters added to member"
@@ -301,8 +232,9 @@ def activate_default_newsletter_groups(client, list_id, member_data, group_name)
 end
 
 def update_member_subscription_group(client, list_id, member_data)
+
   # updates existing member's subscription group
-  email = Digest::MD5.hexdigest member_data["user_email"].downcase
+  email = Digest::MD5.hexdigest member_data["em_email"].downcase
   if member_exists_in_list?(client, list_id, member_data)
     # create hash of interest_ids; set all to false except member's subscription group
     group_id = get_group_id_of_name(client, list_id, ENV['MAILCHIMP_SUBSCRIPTION_GROUP_NAME'])
@@ -328,7 +260,7 @@ def update_member_subscription_group(client, list_id, member_data)
     # update subscription group
     member = client.lists.update_list_member(
         list_id,
-        member_data["user_email"],
+        member_data["em_email"],
         :interests => interests_hash_to_set
     )
   else
@@ -341,52 +273,53 @@ def update_member_subscription_group(client, list_id, member_data)
 end
 
 def add_or_update_member_record(client, list_id, member_data, index)
-  # IF "service_name" begins with 'Comm', replace with generic name 'Commercial Account Access'. Avoids numerous unique commericial subscriptions
-  if member_data["service_name"].start_with?('Comm')
-    member_data["service_name"] = 'Commercial Account Access'
-  end
   
   # set merge_fields to update in MailChimp member record
   merge_fields = {}
-  merge_fields["FNAME"] = get_first_name(member_data)
-  merge_fields["LNAME"] = get_last_name(member_data)
-
-  merge_fields["PHONE"] = member_data["user_phone"] unless member_data["user_phone"].nil?
+  merge_fields["FNAME"] = member_data["occ_fname"].capitalize unless member_data["occ_fname"].nil?
+  merge_fields["LNAME"] = member_data["occ_lname"].capitalize unless member_data["occ_lname"].nil?
+  merge_fields["PHONE"] = member_data["ph_num"] unless member_data["ph_num"].nil?
   merge_fields["FULL_ADDR"] = get_full_address(member_data) unless get_full_address(member_data).nil?
   merge_fields["ADDRESS"] = get_address(member_data) unless get_address(member_data).nil?
-  merge_fields["CITY"] = get_city(member_data) unless get_city(member_data).nil?
-  merge_fields["STATE"] = get_state(member_data) unless get_state(member_data).nil?
-  merge_fields["ZIPCODE"] = get_zipcode(member_data) unless get_zipcode(member_data).nil?
-  merge_fields["LASTSTART"] = member_data["startTime"] unless member_data["startTime"].nil?
-  merge_fields["EXPIRE"] = member_data["expireTime"] unless member_data["expireTime"].nil?
-  merge_fields["MMERGE18"] = member_data['disabled'] == "1" ? 'INACTIVE' : 'ACTIVE'
-  merge_fields["MMERGE24"] = digital_subscription?(member_data)
+  merge_fields["CITY"] = member_data["ad_city"] unless member_data["ad_city"].nil?
+  merge_fields["STATE"] = member_data["ad_state"] unless member_data["ad_state"].nil?
+  merge_fields["ZIPCODE"] = member_data["ad_zip"] unless member_data["ad_zip"].nil?
+  merge_fields["ORIGSTART"] = Date.strptime(member_data["sp_orig_start"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_orig_start"].nil?
+  merge_fields["LASTSTART"] = Date.strptime(member_data["sp_beg"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_beg"].nil?
+  merge_fields["GRACEDATE"] = Date.strptime(member_data["sp_grace_end"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_grace_end"].nil?
+  merge_fields["STOPDATE"] = Date.strptime(member_data["sp_paid_thru"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_paid_thru"].nil?
+
+  #merge_fields["SERVICE_TYPE"] = member_data["rr-del_meth"] unless member_data["rr_del_meth"].nil?  # service: 'internet','carrier','mail'
+  merge_fields["RATE"] = member_data["rr_zone"] unless member_data["rr_zone"].nil?  # ratecode?
+  subscription_names = eval ENV['SUBSCRIPTION_NAMES']
+  member_data["service_name"] = subscription_names[member_data["rr_del_meth"]].nil? ? subscription_names["default"] : subscription_names[member_data["rr_del_meth"]]
   merge_fields["MMERGE25"] = subscriber?(member_data)
 
-  #puts member_data.inspect
-  #puts member_data["user_email"] + ' - ' + merge_fields["FNAME"] + ' ' + merge_fields["LNAME"]
+  puts merge_fields.inspect
+  #puts member_data["em_email"] + ' - ' + merge_fields["FNAME"] + ' ' + merge_fields["LNAME"]
   #puts "Status:  " + member_data['disabled'] + ' = ' + merge_fields["MMERGE18"]
   #puts "Digital? " + member_data["service_name"] + ' = ' + merge_fields["MMERGE24"]
   #puts "Sub?     " + member_data["service_name"] + ' = ' + merge_fields["MMERGE25"]
-  #puts merge_fields
   
   # add or update MailChimp member record
-  email = Digest::MD5.hexdigest member_data["user_email"].downcase
+  email = Digest::MD5.hexdigest member_data["em_email"].downcase
   if member_exists_in_list?(client, list_id, member_data)
     # existing member record
+    #puts 'Email found in Mailchimp'
     member = client.lists.update_list_member(
         list_id,
-        member_data["user_email"],
+        member_data["em_email"],
         :status => "subscribed", # "subscribed","unsubscribed","cleaned","pending"
         :merge_fields => merge_fields
       )
   else
     # new member record
+    #puts 'Email not found in Mailchimp'
     member = client.lists.set_list_member(
         list_id,
-        member_data["user_email"],
+        member_data["em_email"],
         {
-          :email_address => member_data["user_email"],
+          :email_address => member_data["em_email"],
           :status => "subscribed", # "subscribed","unsubscribed","cleaned","pending"
           :merge_fields => merge_fields
         }
@@ -412,45 +345,43 @@ end
 ##################################################################
 # MAIN
 ##################################################################
-# Get records from TownNews CSV files - registered users and subscribers
-# TownNews files:
-#   userexport.csv =  registered users in  TownNews database (subscribers and non-subscriber)
-#   subscribers.csv = subscribers in TownNews database with their subscription info
+# Get records from Newzware CSV files - registered users and subscribers
+# Newzware files:
+#   subscribers.csv = subscribers in Newzware database with their subscription info
 
-# supplied parameter determines which site we will import from TownNews
-if ARGV[0].nil?
-  puts "No domain requested!"
-  puts "   Please supply domain to import from TownNews"
-  puts "   Example =   ./import_subscribers.rb bendbulletin"
-  return
-else
-  domain = ARGV[0]
-  puts "\n---------------------------------------------------------"
-  puts "Domain to import: " + domain
-  puts "---------------------------------------------------------\n"
-end
+#download_Newzware_FTP_files()  #connect to Newzware FTP and download files
 
-download_TownNews_FTP_files(domain)  #connect to TownNews FTP and download files
+# Get site codes and associated domains
+eomedia_sites = eval ENV['EOMEDIA_SITES']
+eomedia_sites.each do |site|
+  #puts site[0] + " " + site[1]
+  domain = site[1]
 
-# read downloaded records into arrays for import
-townnews_subscribers = get_townnews_subscribers(domain)   # returns array of subscribers
-townnews_users = get_townnews_users(domain)               # returns array of registered users
+  # read downloaded domain records into array for import
+  newzware_subscribers = get_newzware_subscribers(domain)   # returns array of subscribers for domain
+  newzware_users = get_newzware_users(domain)   # returns array of registered users for domain
 
-# merge registered users and subscribers into single array for import
-townnews_users_and_subscribers = merge_townnews_users_and_subscribers(townnews_users,townnews_subscribers)
+  # merge registered users and subscribers into single array for import
+  newzware_users_and_subscribers = merge_newzware_users_and_subscribers(newzware_users,newzware_subscribers)
+puts newzware_users_and_subscribers.inspect
+exit
+  
+  # Update MailChimp with new subscriber record changes
+  mailchimp_client = connect_mailchimp()  # connect to mailchimp API
+  list_id = ENV[domain.upcase+'_LIST_ID'] # get MailChimp audience list ID based on domain
+  list_name = mailchimp_client.lists.get_list(list_id)["name"] # get MailChimp audience name
+  puts "\nConnected to MailChimp audience: #" + list_id + " - " + list_name
 
-# Update MailChimp with new subscriber record changes
-mailchimp_client = connect_mailchimp()  # connect to mailchimp API
-list_id = ENV[domain.upcase+'_LIST_ID'] # get MailChimp audience list ID based on domain
-list_name = mailchimp_client.lists.get_list(list_id)["name"] # get MailChimp audience name
-puts "\nConnected to MailChimp audience: #" + list_id + " - " + list_name
+  newzware_users_and_subscribers.each_with_index do |member,index|
+    # connect to MailChimp API every 100 records
+    #if index % 100 == 0
+    #  mailchimp_client = connect_mailchimp()
+    #end
 
-townnews_users_and_subscribers.each_with_index do |member,index|
-  # connect to MailChimp API every 100 records
-  #if index % 100 == 0
-  #  mailchimp_client = connect_mailchimp()
-  #end
+    add_or_update_member_record(mailchimp_client, list_id, member, index)
+  end
+exit
 
-  add_or_update_member_record(mailchimp_client, list_id, member, index)
+
 end
 
