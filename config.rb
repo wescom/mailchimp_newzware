@@ -8,7 +8,8 @@
 # Add application configuration variables here, as shown below.
 #
 # Main global settings
-ENV['DAYS_PAST_TO_IMPORT'] = '3'   # number of past days to import from csv file (ie. 1 = yesterday, 2 = two days ago,...)
+ENV['DAYS_PAST_TO_IMPORT'] = '1'   # number of past days to import from csv file (ie. 1 = yesterday, 2 = two days ago,...)
+ENV['IGNORE_DAYS_PAST_TO_IMPORT'] = 'false'   # ignore the days_past_to_ignore setting and import all records?
 # MailChimp settings
 ENV['MAILCHIMP_SUBSCRIPTION_GROUP_NAME'] = 'Subscriptions'
 ENV['MAILCHIMP_MARKETING_GROUP_NAME'] = 'I still want to be the first to know about:'
@@ -30,8 +31,8 @@ ENV['RV-TIMES_LIST_ID'] = '2798b4fb96'
 # Newzware FTP settings and data configs
 ENV['NEWZWARE_REGISTERED_USERS_FILENAME'] = '/mnt/PAULINA3/EOMG_FTP/newzwareftp/REGISTRATIONS_EXPORT_FROM_NEWZWARE.csv'
 ENV['NEWZWARE_SUBSCRIBERS_FILENAME'] = '/mnt/PAULINA3/EOMG_FTP/newzwareftp/SUBSCRIBERS_EXPORT_FROM_NEWZWARE.csv'
-ENV['NEWZWARE_SUBSCRIPTION_NAMES'] = ''
-ENV['NEWZWARE_REGISTERED_GROUP_NAME'] = 'Registered Account'
+#ENV['NEWZWARE_SUBSCRIPTION_NAMES'] = ''
+#ENV['NEWZWARE_REGISTERED_GROUP_NAME'] = 'Registered Account'
 # EO Media site codes and domains
 ENV['EOMEDIA_SITES'] = '{ 
   "BB" => "bendbulletin", 
@@ -51,6 +52,8 @@ ENV['EOMEDIA_SITES'] = '{
 ENV['SUBSCRIPTION_NAMES'] = '{ 
   "I" => "Full Digital Access", 
   "C" => "Print Subscription - Carrier", 
-  "M" => "Print Subscription - Mail", 
-  "default" => "Registered User"
+  "M" => "Print Subscription - Mail",
+  "S" => "Subscription",
+  "G" => "Registered Account",
+  "default" => "Registered Account"
 }'  # default value is used if nothing provided or does not exist in hash

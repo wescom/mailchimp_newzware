@@ -29,11 +29,11 @@ end
 ##################################################################
 def get_group_id_of_name(client, list_id, group_name)
   # searches through audience list for group name and returns id
-  groups = client.lists.get_list_interest_categories(list_id)
-
+  groups = client.lists.get_list_interest_categories(list_id, opts = {count: 100})
   keys_to_extract = ["id", "title"]
   groups["categories"].map do |category|
     if category.has_value?(group_name)
+      #puts category["id"].to_s + " " + category["title"]
       return category["id"]
     end
   end
@@ -52,7 +52,8 @@ def get_interest_id_of_name(client, list_id, group_name, interest_name)
   #puts group_id
 
   # find group_interest_id of interest_name
-  group_interests = client.lists.list_interest_category_interests(list_id, group_id)
+  # IMPORTANT... MailChimp API limits the returned records to 10 by default; increase the count to get all records
+  group_interests = client.lists.list_interest_category_interests(list_id, group_id, opts = {count: 100})
   keys_to_extract = ["id", "name"]
   group_interests["interests"].map do |interest|
     if interest.has_value?(interest_name)
@@ -64,6 +65,30 @@ def get_interest_id_of_name(client, list_id, group_name, interest_name)
   rescue MailchimpMarketing::ApiError => e
     puts "Group Interest Error: #{e}"  
     exit!
+end
+
+def list_groups_and_all_interests(client, list_id)
+  # list all groups for list_id and all interests within those groups
+
+  groups = client.lists.get_list_interest_categories(list_id)
+  groups["categories"].map do |category|
+    puts "\n" + category["id"].to_s + " - " + category["title"]
+    
+    group_interests = client.lists.list_interest_category_interests(list_id, category["id"].to_s,opts = {count: 100})
+    #puts group_interests.inspect
+    group_interests["interests"].each do |interest|
+      puts "   " + interest["id"].to_s + " - " + interest["name"]
+    end
+    
+  end
+  puts "\n\n"
+
+  exit
+  
+
+  rescue MailchimpMarketing::ApiError => e
+    puts "Group Interest Add Error: #{e}"
+    exit!  
 end
 
 def member_exists_in_list?(client, list_id, member_data)
@@ -81,14 +106,13 @@ def add_group_interest(client, list_id, group_name, interest_name)
 
   # find group_id of group_name
   group_id = get_group_id_of_name(client, list_id, group_name)
-  #puts group_id
-
   response = client.lists.create_interest_category_interest(
       list_id,
       group_id,
       { 'name' => interest_name }
     )
   puts "*** New mailchimp group_interest added: " + group_name + "->" + response['name']
+
   return response['id']
 
   rescue MailchimpMarketing::ApiError => e
@@ -97,7 +121,7 @@ def add_group_interest(client, list_id, group_name, interest_name)
 end
 
 ##################################################################
-### ADDRESS funtions
+### UTILITY funtions
 ##################################################################
 
 def get_address(member_data)
@@ -130,35 +154,26 @@ def get_full_address(member_data)
   return full_addr.strip
 end
 
+def most_recent_date(date1,date2)
+  if date1.empty? || date2.empty?
+    if date1.empty?
+      return date2
+    else
+      return date1
+    end
+  else
+    most_recent_date = Date.strptime(date1,"%Y-%m-%d") > Date.strptime(date2,"%Y-%m-%d") ? date1 : date2
+    return most_recent_date
+  end
+end
+
 ##################################################################
 ### MAILCHIMP UPDATE functions
 ##################################################################
-def merge_newzware_users_and_subscribers(newzware_users,newzware_subscribers)
-  # merges registered users and subscriber into single array for importing to MailChimp
-  newzware_users_and_subscribers = newzware_subscribers
-  
-  newzware_users.each do |user|
-    #search newzware_users array for additional registered-only records
-    user_in_subscriber_array = newzware_subscribers.find{|a| a['em_email'] == user['email']}
-    if user_in_subscriber_array.nil?  # user was not a subscriber thus only registering, add to array
-puts "\n" + user['email'] + " not in subscriber file"
-      newzware_users_and_subscribers.push("",user['fname'],user['lname'],user['email'],"","","","","","",user['user_type'],user['rr_edition'],user['created'],"","",user['created'],"","","","")
-    else
-      # already in subscriber file, dont add again
-    end
-puts user.inspect
-puts newzware_users_and_subscribers.length
-puts newzware_users_and_subscribers[newzware_users_and_subscribers.length-1].inspect
-puts newzware_users_and_subscribers[newzware_users_and_subscribers.length-1]['email']
-exit
-  end
-  return newzware_users_and_subscribers
-end
-
 def subscriber?(member_data)
   # returns whether member is a subscriber
   subscription_names = eval ENV['SUBSCRIPTION_NAMES']
-  if subscription_names[member_data["rr_del_meth"]].nil?  # ENV['SUBSCRIPTION_NAMES'] doesnt have a value
+  if subscription_names[member_data["rr_del_meth"]].downcase.include?("register")  # ENV['SUBSCRIPTION_NAMES'] is a registered user
     return 'NO'
   else
     return 'YES'
@@ -171,7 +186,7 @@ def activate_member_marketing_groups(client, list_id, member_data)
   if member_exists_in_list?(client, list_id, member_data)
     group_id = get_group_id_of_name(client, list_id, ENV['MAILCHIMP_MARKETING_GROUP_NAME'])
     #puts group_id
-    group_interests = client.lists.list_interest_category_interests(list_id, group_id) # find all interests of group_id
+    group_interests = client.lists.list_interest_category_interests(list_id, group_id,opts = {count: 100}) # find all interests of group_id
     interests_hash_to_set = {}
     group_interests["interests"].map do |interest|
       interests_hash_to_set[interest["id"]] = true
@@ -201,7 +216,7 @@ def activate_default_newsletter_groups(client, list_id, member_data, group_name)
   if member_exists_in_list?(client, list_id, member_data)
     # create hash of interest_ids; set all to false except member's subscription group
     group_id = get_group_id_of_name(client, list_id, group_name)
-    group_interests = client.lists.list_interest_category_interests(list_id, group_id) # find all interests of group_id
+    group_interests = client.lists.list_interest_category_interests(list_id, group_id,opts = {count: 100}) # find all interests of group_id
     interests_hash_to_set = {}
     keys_to_extract = ["id", "name"]
     newsletters.each do |newsletter|
@@ -238,11 +253,13 @@ def update_member_subscription_group(client, list_id, member_data)
   if member_exists_in_list?(client, list_id, member_data)
     # create hash of interest_ids; set all to false except member's subscription group
     group_id = get_group_id_of_name(client, list_id, ENV['MAILCHIMP_SUBSCRIPTION_GROUP_NAME'])
-    group_interests = client.lists.list_interest_category_interests(list_id, group_id) # find all interests of group_id
+    group_interests = client.lists.list_interest_category_interests(list_id, group_id,opts = {count: 100}) # find all interests of group_id
+
     interests_hash_to_set = {}
     keys_to_extract = ["id", "name"]
     service_name_matches_an_interest = false  # keep track if subscription service_name matches at least one interest
     group_interests["interests"].map do |interest|
+      #puts "*" + interest.inspect = "*"
       interest_matches = interest.has_value?(member_data["service_name"])
       interests_hash_to_set[interest["id"]] = interest_matches
       if interest_matches
@@ -276,6 +293,7 @@ def add_or_update_member_record(client, list_id, member_data, index)
   
   # set merge_fields to update in MailChimp member record
   merge_fields = {}
+  merge_fields["MMERGE16"] = member_data["occ_id"] unless member_data["occ_id"].nil?
   merge_fields["FNAME"] = member_data["occ_fname"].capitalize unless member_data["occ_fname"].nil?
   merge_fields["LNAME"] = member_data["occ_lname"].capitalize unless member_data["occ_lname"].nil?
   merge_fields["PHONE"] = member_data["ph_num"] unless member_data["ph_num"].nil?
@@ -284,23 +302,24 @@ def add_or_update_member_record(client, list_id, member_data, index)
   merge_fields["CITY"] = member_data["ad_city"] unless member_data["ad_city"].nil?
   merge_fields["STATE"] = member_data["ad_state"] unless member_data["ad_state"].nil?
   merge_fields["ZIPCODE"] = member_data["ad_zip"] unless member_data["ad_zip"].nil?
-  merge_fields["ORIGSTART"] = Date.strptime(member_data["sp_orig_start"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_orig_start"].nil?
-  merge_fields["LASTSTART"] = Date.strptime(member_data["sp_beg"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_beg"].nil?
-  merge_fields["GRACEDATE"] = Date.strptime(member_data["sp_grace_end"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_grace_end"].nil?
-  merge_fields["STOPDATE"] = Date.strptime(member_data["sp_paid_thru"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_paid_thru"].nil?
+  merge_fields["ORIGSTART"] = Date.strptime(member_data["sp_orig_start"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_orig_start"].empty?
+  merge_fields["STARTDATE"] = Date.strptime(member_data["sp_beg"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_beg"].empty?
+  merge_fields["GRACEDATE"] = Date.strptime(member_data["sp_grace_end"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_grace_end"].empty?
+  merge_fields["STOPDATE"] = Date.strptime(member_data["sp_paid_thru"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_paid_thru"].empty?
+  merge_fields["LAST_LOGIN"] = Date.strptime(member_data["last_login"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["last_login"].empty?
+  #merge_fields["SERVICE_TYPE"] = member_data["rr-del_meth"] unless member_data["rr_del_meth"].empty?  # service: 'internet','carrier','mail'
+  merge_fields["RATE"] = member_data["rr_zone"] unless member_data["rr_zone"].empty?  # ratecode?
 
-  #merge_fields["SERVICE_TYPE"] = member_data["rr-del_meth"] unless member_data["rr_del_meth"].nil?  # service: 'internet','carrier','mail'
-  merge_fields["RATE"] = member_data["rr_zone"] unless member_data["rr_zone"].nil?  # ratecode?
   subscription_names = eval ENV['SUBSCRIPTION_NAMES']
-  member_data["service_name"] = subscription_names[member_data["rr_del_meth"]].nil? ? subscription_names["default"] : subscription_names[member_data["rr_del_meth"]]
+  #puts member_data["rr_del_meth"]
+  member_data["service_name"] = subscription_names[member_data["rr_del_meth"]].empty? ? subscription_names["default"] : subscription_names[member_data["rr_del_meth"]]
+  #puts member_data["service_name"]
   merge_fields["MMERGE25"] = subscriber?(member_data)
 
-  puts merge_fields.inspect
-  #puts member_data["em_email"] + ' - ' + merge_fields["FNAME"] + ' ' + merge_fields["LNAME"]
-  #puts "Status:  " + member_data['disabled'] + ' = ' + merge_fields["MMERGE18"]
-  #puts "Digital? " + member_data["service_name"] + ' = ' + merge_fields["MMERGE24"]
+  #puts merge_fields.inspect
+  #puts member_data["em_email"] + ' - ' + merge_fields["FNAME"].to_s + ' ' + merge_fields["LNAME"].to_s
   #puts "Sub?     " + member_data["service_name"] + ' = ' + merge_fields["MMERGE25"]
-  
+
   # add or update MailChimp member record
   email = Digest::MD5.hexdigest member_data["em_email"].downcase
   if member_exists_in_list?(client, list_id, member_data)
@@ -337,9 +356,14 @@ def add_or_update_member_record(client, list_id, member_data, index)
   else
     puts "#{index+1} - Registered User added/updated in MailChimp:  " + member['email_address'] + " - " + member['full_name']
   end
-
-rescue MailchimpMarketing::ApiError => e
-  puts "Update Member Error: #{e}"
+  
+  rescue MailchimpMarketing::ApiError => e
+    if merge_fields["MMERGE25"] == "YES"
+      puts "#{index+1} - Subscriber update FAILED in MailChimp:  " + member_data["em_email"] + " - " + member_data['occ_fname'] + " " + member_data["occ_lname"]
+    else
+      puts "#{index+1} - Registered User update FAILED in MailChimp:  " + member_data["em_email"] + " - " + member_data['occ_fname'] + " " + member_data["occ_lname"]
+    end
+    puts "Update Member Error: #{e}"
 end
 
 ##################################################################
@@ -354,7 +378,9 @@ end
 # Get site codes and associated domains
 eomedia_sites = eval ENV['EOMEDIA_SITES']
 eomedia_sites.each do |site|
-  #puts site[0] + " " + site[1]
+  puts "\n--------------------------------------------------------------"
+  puts "Importing domain: " + site[0] + " - " + site[1]
+  puts "--------------------------------------------------------------"
   domain = site[1]
 
   # read downloaded domain records into array for import
@@ -363,8 +389,9 @@ eomedia_sites.each do |site|
 
   # merge registered users and subscribers into single array for import
   newzware_users_and_subscribers = merge_newzware_users_and_subscribers(newzware_users,newzware_subscribers)
-puts newzware_users_and_subscribers.inspect
-exit
+
+  # filter records by date
+  newzware_users_and_subscribers = filter_records_by_date(newzware_users_and_subscribers)
   
   # Update MailChimp with new subscriber record changes
   mailchimp_client = connect_mailchimp()  # connect to mailchimp API
@@ -372,16 +399,17 @@ exit
   list_name = mailchimp_client.lists.get_list(list_id)["name"] # get MailChimp audience name
   puts "\nConnected to MailChimp audience: #" + list_id + " - " + list_name
 
+  puts "Updating Mailchimp audience..."
   newzware_users_and_subscribers.each_with_index do |member,index|
     # connect to MailChimp API every 100 records
     #if index % 100 == 0
     #  mailchimp_client = connect_mailchimp()
     #end
 
+    #puts member.inspect
     add_or_update_member_record(mailchimp_client, list_id, member, index)
   end
-exit
-
-
+  
+  exit
 end
 
