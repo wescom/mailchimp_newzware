@@ -376,7 +376,18 @@ end
 download_Newzware_FTP_files()  #connect to Newzware FTP and download files
 
 # Get site codes and associated domains
-eomedia_sites = eval ENV['EOMEDIA_SITES']
+eomedia_sites = eval ENV['EOMEDIA_SITES'] 
+if ENV['SITE_TO_IMPORT'] != 'ALL'
+  # filter array to only sites to import
+  eomedia_sites.delete_if do |site|
+    if ENV['SITE_TO_IMPORT'] != site
+      true
+    else
+      false
+    end
+  end
+end
+
 eomedia_sites.each do |site|
   puts "\n--------------------------------------------------------------"
   puts "Importing domain: " + site[0] + " - " + site[1]

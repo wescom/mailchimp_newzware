@@ -8,6 +8,7 @@
 # Add application configuration variables here, as shown below.
 #
 # Main global settings
+ENV['SITE_TO_IMPORT'] = 'ALL'   # import 'ALL' sites or one site code (BB,BC,CP,...)
 ENV['DAYS_PAST_TO_IMPORT'] = '1'   # number of past days to import from csv file (ie. 1 = yesterday, 2 = two days ago,...)
 ENV['IGNORE_DAYS_PAST_TO_IMPORT'] = 'false'   # ignore the days_past_to_ignore setting and import all records?
 # MailChimp settings
