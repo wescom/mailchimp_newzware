@@ -192,3 +192,12 @@ def filter_records_by_date(newzware_users_and_subscribers)
   puts "   * records ready for import: " + newzware_users_and_subscribers.length.to_s
   return newzware_users_and_subscribers
 end
+
+def fix_bad_record_data(newzware_users_and_subscribers)
+  # clean up bad data in records
+  puts "Clean bad record data"
+  newzware_users_and_subscribers.each do |element|
+    #remove any whitespace from emails
+    element['em_email'] = element['em_email'].gsub(/\s+/, "")
+  end
+end

@@ -79,12 +79,7 @@ def list_groups_and_all_interests(client, list_id)
     group_interests["interests"].each do |interest|
       puts "   " + interest["id"].to_s + " - " + interest["name"]
     end
-    
   end
-  puts "\n\n"
-
-  exit
-  
 
   rescue MailchimpMarketing::ApiError => e
     puts "Group Interest Add Error: #{e}"
@@ -373,7 +368,7 @@ end
 # Newzware files:
 #   subscribers.csv = subscribers in Newzware database with their subscription info
 
-download_Newzware_FTP_files()  #connect to Newzware FTP and download files
+#download_Newzware_FTP_files()  #connect to Newzware FTP and download files
 
 # Get site codes and associated domains
 eomedia_sites = eval ENV['EOMEDIA_SITES'] 
@@ -403,6 +398,9 @@ eomedia_sites.each do |site|
 
   # filter records by date
   newzware_users_and_subscribers = filter_records_by_date(newzware_users_and_subscribers)
+  
+  # Clean up record data
+  newzware_users_and_subscribers = fix_bad_record_data(newzware_users_and_subscribers)
   
   # Update MailChimp with new subscriber record changes
   mailchimp_client = connect_mailchimp()  # connect to mailchimp API
