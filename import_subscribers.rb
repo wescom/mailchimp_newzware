@@ -368,7 +368,7 @@ end
 # Newzware files:
 #   subscribers.csv = subscribers in Newzware database with their subscription info
 
-#download_Newzware_FTP_files()  #connect to Newzware FTP and download files
+download_Newzware_FTP_files()  #connect to Newzware FTP and download files
 
 # Get site codes and associated domains
 eomedia_sites = eval ENV['EOMEDIA_SITES'] 
