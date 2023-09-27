@@ -419,6 +419,5 @@ eomedia_sites.each do |site|
     add_or_update_member_record(mailchimp_client, list_id, member, index)
   end
   
-  exit
 end
 
