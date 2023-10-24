@@ -119,13 +119,24 @@ end
 ### UTILITY funtions
 ##################################################################
 
+def get_full_name(member_data)
+  full_name = ""
+  if member_data.key?("occ_fname")
+    full_name = member_data['occ_fname'] unless member_data['occ_fname'].nil? || member_data['occ_fname'].empty?
+  end
+  if member_data.key?("occ_lname")
+    full_name = full_name + " " + member_data['occ_lname'] unless member_data['occ_lname'].nil? || member_data['occ_lname'].empty?
+  end
+  return full_name
+end
+
 def get_address(member_data)
   address = ""
   if member_data.key?("addr1")
     address = member_data['addr1']
   end
   if member_data.key?("addr2")
-    address = address + "," + member_data['addr2'] unless member_data['addr2'].empty?
+    address = address + "," + member_data['addr2'] unless member_data['addr2'].nil? || member_data['addr2'].empty?
   end
   return address
 end
@@ -138,13 +149,13 @@ def get_full_address(member_data)
     full_addr = full_addr + "," unless get_address(member_data).empty?
   end
   if member_data.key?("ad_city")
-    full_addr = full_addr + " " + member_data['ad_city'] unless member_data['ad_city'].empty?
+    full_addr = full_addr + " " + member_data['ad_city'] unless member_data['ad_city'].nil? || member_data['ad_city'].empty?
   end
   if member_data.key?("ad_state")
-    full_addr = full_addr + " " + member_data['ad_state'] unless member_data['ad_state'].empty?
+    full_addr = full_addr + " " + member_data['ad_state'] unless member_data['ad_state'].nil? || member_data['ad_state'].empty?
   end
   if member_data.key?("ad_zip")
-    full_addr = full_addr + " " + member_data['ad_zip'] unless member_data['ad_zip'].empty?
+    full_addr = full_addr + " " + member_data['ad_zip'] unless member_data['ad_zip'].nil? || member_data['ad_zip'].empty?
   end
   return full_addr.strip
 end
@@ -346,19 +357,24 @@ def add_or_update_member_record(client, list_id, member_data, index)
   update_member_subscription_group(client, list_id, member_data)
 
   member = client.lists.get_list_member(list_id, email)
-  if merge_fields["MMERGE25"] == "YES"
-    puts "#{index+1} - Subscriber added/updated in MailChimp:  " + member['email_address'] + " - " + member['full_name'] + " - " + member_data["service_name"]
-  else
-    puts "#{index+1} - Registered User added/updated in MailChimp:  " + member['email_address'] + " - " + member['full_name']
+
+  if $logs == 'detail'
+    if merge_fields["MMERGE25"] == "YES"
+      puts "#{index+1} - Subscriber added/updated in MailChimp:  " + member['email_address'] + " - " + member['full_name'] + " - " + member_data["service_name"]
+    else
+      puts "#{index+1} - Registered User added/updated in MailChimp:  " + member['email_address'] + " - " + member['full_name']
+    end
   end
   
   rescue MailchimpMarketing::ApiError => e
-    if merge_fields["MMERGE25"] == "YES"
-      puts "#{index+1} - Subscriber update FAILED in MailChimp:  " + member_data["em_email"] + " - " + member_data['occ_fname'] + " " + member_data["occ_lname"]
-    else
-      puts "#{index+1} - Registered User update FAILED in MailChimp:  " + member_data["em_email"] + " - " + member_data['occ_fname'] + " " + member_data["occ_lname"]
+    if $logs == 'detail'
+      if merge_fields["MMERGE25"] == "YES"
+        puts "#{index+1} - Subscriber update FAILED in MailChimp:  " + member_data["em_email"] + " - " + get_full_name(member_data)
+      else
+        puts "#{index+1} - Registered User update FAILED in MailChimp:  " + member_data["em_email"] + " - " + get_full_name(member_data)
+      end
+      puts "Update Member Error: #{e}"
     end
-    puts "Update Member Error: #{e}"
 end
 
 ##################################################################
@@ -367,6 +383,12 @@ end
 # Get records from Newzware CSV files - registered users and subscribers
 # Newzware files:
 #   subscribers.csv = subscribers in Newzware database with their subscription info
+
+# save all paramters passed to script
+#  -> supply variable -logs=detail for info on each imported record.
+puts "Script parameters available: -logs=detail"
+args = Hash[ ARGV.join(' ').scan(/--?([^=\s]+)(?:=(\S+))?/) ]
+$logs = args['logs']
 
 download_Newzware_FTP_files()  #connect to Newzware FTP and download files
 
