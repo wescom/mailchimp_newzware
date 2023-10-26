@@ -205,7 +205,9 @@ def activate_member_marketing_groups(client, list_id, member_data)
         :interests => interests_hash_to_set
     )
     #puts member
-    puts "     Marketing newsletters added to member"
+    if $logs == 'detail'
+      puts "     Marketing newsletters added to member"
+    end
   else
     puts "Member NOT FOUND in MailChimp"
   end
@@ -242,7 +244,9 @@ def activate_default_newsletter_groups(client, list_id, member_data, group_name)
         member_data["em_email"],
         :interests => interests_hash_to_set
     )
-    puts "     Default newsletters added to member"
+    if $logs == 'detail'
+      puts "     Default newsletters added to member"
+    end
   else
     puts "Member NOT FOUND in MailChimp"
   end
