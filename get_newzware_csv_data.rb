@@ -105,9 +105,9 @@ def get_newzware_subscribers(domain)
   
   # delete all records without email address
   newzware_subscribers.delete_if do |element|
-    if element["em_email"].empty?
+    if element["em_email"].nil?
       # if em_email empty, replace with login_id if an email address
-      if !element["login_id"].empty? && element["login_id"].include?("@")
+      if !element["login_id"].nil? && element["login_id"].include?("@")
         element["em_email"] = element["login_id"]
         false
       else
@@ -167,14 +167,14 @@ def filter_records_by_date(newzware_users_and_subscribers)
     puts "Filter records to past " + ENV['DAYS_PAST_TO_IMPORT'] + " days"
     todays_date = Date.parse(DateTime.now.to_s)
     newzware_users_and_subscribers.delete_if do |element|
-      if element["last_change_date"].empty?
+      if element["last_change_date"].nil?
         import_by_change_date = true
       else
         change_date = Date.parse(element["last_change_date"])
         import_by_change_date = (todays_date - change_date).to_i > ENV['DAYS_PAST_TO_IMPORT'].to_i
       end
 
-      if element["last_login"].empty?
+      if element["last_login"].nil?
         import_by_login_date = true
       else
         login_date = Date.parse(element["last_login"])
