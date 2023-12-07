@@ -312,11 +312,11 @@ def add_or_update_member_record(client, list_id, member_data, index)
   merge_fields["CITY"] = member_data["ad_city"] unless member_data["ad_city"].nil?
   merge_fields["STATE"] = member_data["ad_state"] unless member_data["ad_state"].nil?
   merge_fields["ZIPCODE"] = member_data["ad_zip"] unless member_data["ad_zip"].nil?
-  merge_fields["ORIGSTART"] = Date.strptime(member_data["sp_orig_start"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_orig_start"].nil?
-  merge_fields["STARTDATE"] = Date.strptime(member_data["sp_beg"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_beg"].nil?
-  merge_fields["GRACEDATE"] = Date.strptime(member_data["sp_grace_end"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_grace_end"].nil?
-  merge_fields["STOPDATE"] = Date.strptime(member_data["sp_paid_thru"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["sp_paid_thru"].nil?
-  merge_fields["LAST_LOGIN"] = Date.strptime(member_data["last_login"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless member_data["last_login"].nil?
+  merge_fields["ORIGSTART"] = Date.strptime(member_data["sp_orig_start"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless !member_data["sp_orig_start"] || member_data["sp_orig_start"].empty?
+  merge_fields["STARTDATE"] = Date.strptime(member_data["sp_beg"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless !member_data["sp_beg"] || member_data["sp_beg"].empty?
+  merge_fields["GRACEDATE"] = Date.strptime(member_data["sp_grace_end"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless !member_data["sp_grace_end"] || member_data["sp_grace_end"].empty?
+  merge_fields["STOPDATE"] = Date.strptime(member_data["sp_paid_thru"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless !member_data["sp_paid_thru"] || member_data["sp_paid_thru"].empty?
+  merge_fields["LAST_LOGIN"] = Date.strptime(member_data["last_login"],"%Y-%m-%d").strftime("%m/%d/%Y").to_s unless !member_data["last_login"] || member_data["last_login"].empty?
   #merge_fields["SERVICE_TYPE"] = member_data["rr-del_meth"] unless member_data["rr_del_meth"].empty?  # service: 'internet','carrier','mail'
   merge_fields["RATE"] = member_data["rr_zone"] unless member_data["rr_zone"].empty?  # ratecode?
 
@@ -394,7 +394,7 @@ puts "Script parameters available: -logs=detail"
 args = Hash[ ARGV.join(' ').scan(/--?([^=\s]+)(?:=(\S+))?/) ]
 $logs = args['logs']
 
-download_Newzware_FTP_files()  #connect to Newzware FTP and download files
+#download_Newzware_FTP_files()  #connect to Newzware FTP and download files
 
 # Get site codes and associated domains
 eomedia_sites = eval ENV['EOMEDIA_SITES'] 

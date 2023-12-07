@@ -167,14 +167,14 @@ def filter_records_by_date(newzware_users_and_subscribers)
     puts "Filter records to past " + ENV['DAYS_PAST_TO_IMPORT'] + " days"
     todays_date = Date.parse(DateTime.now.to_s)
     newzware_users_and_subscribers.delete_if do |element|
-      if element["last_change_date"].nil?
+      if !element["last_change_date"] || element["last_change_date"].empty?
         import_by_change_date = true
       else
         change_date = Date.parse(element["last_change_date"])
         import_by_change_date = (todays_date - change_date).to_i > ENV['DAYS_PAST_TO_IMPORT'].to_i
       end
 
-      if element["last_login"].nil?
+      if !element["last_login"] || element["last_login"].empty?
         import_by_login_date = true
       else
         login_date = Date.parse(element["last_login"])
