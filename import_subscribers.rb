@@ -394,7 +394,7 @@ puts "Script parameters available: -logs=detail"
 args = Hash[ ARGV.join(' ').scan(/--?([^=\s]+)(?:=(\S+))?/) ]
 $logs = args['logs']
 
-#download_Newzware_FTP_files()  #connect to Newzware FTP and download files
+download_Newzware_FTP_files()  #connect to Newzware FTP and download files
 
 # Get site codes and associated domains
 eomedia_sites = eval ENV['EOMEDIA_SITES'] 
