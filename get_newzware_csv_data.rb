@@ -52,7 +52,7 @@ def get_newzware_users(domain)
   # fname = first name
   # lname = last name
   # email = email
-  # user_type = "S" for Subscribers,  "G" for Registered only (General) 
+  # user_type = "S" for Subscriber (active OR not),  "G" for Registered only (General) 
   # account = account number
   # application = edition/publication of 'G' records
   # created = date newzware account registered
@@ -140,13 +140,14 @@ def merge_newzware_users_and_subscribers(newzware_users,newzware_subscribers)
   
   newzware_users.each do |user|
     # merge registered user array into subscriber array
-    # user_type = "S" for Subscribers,  "G" for Registered only (General)
+    # user_type = "S" for Subscriber (active OR not),  "G" for Registered only (General)
+    # if user record not found in the subscriber file, any 'S' user_type is an expired/canceled subscriber
     user_in_subscriber_array = newzware_subscribers.find{|a| (a['em_email'] == user['email'] && a['rr_edition'] == user['auth_edition'])}
     if user_in_subscriber_array.nil?
       # register user record not found in subscriber file, so search by login id
       user_in_subscriber_array = newzware_subscribers.find{|a| (a['login_id'] == user['login_id'])}
     end
-    if user_in_subscriber_array.nil?  # user was not a subscriber thus only registering, add to array
+    if user_in_subscriber_array.nil?  # user is not currently a subscriber thus only registered or previous subscriber, add to array
       newzware_users_and_subscribers.push([user['account'],user['fname'],user['lname'],user['email'],"","","","","","",user['user_type'],user['application'],user['created'],"","",user['created'],user['last_login'],"","","","",user['auth_last_date']])
       # puts user['email'] + "... appending to file "
     else

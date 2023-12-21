@@ -54,7 +54,7 @@ ENV['SUBSCRIPTION_NAMES'] = '{
   "I" => "Full Digital Access", 
   "C" => "Print Subscription - Carrier", 
   "M" => "Print Subscription - Mail",
-  "S" => "Subscription",
+  "S" => "Stopped Subscription",
   "G" => "Registered Account",
   "default" => "Registered Account"
 }'  # default value is used if nothing provided or does not exist in hash
