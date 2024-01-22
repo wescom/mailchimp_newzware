@@ -68,7 +68,7 @@ def get_newzware_users(domain)
   #read users into array
   userfile = "./data/registered_users.csv"
   newzware_registered_users = Array.new
-  newzware_registered_users = CSV.parse(File.read(userfile), headers: true, col_sep: ",")
+  newzware_registered_users = CSV.parse(File.read(userfile), headers: true, col_sep: ",", liberal_parsing: true)
 
   # delete all records without email address
   newzware_registered_users.delete_if do |element|
@@ -101,7 +101,7 @@ def get_newzware_subscribers(domain)
   #read subscribers into array
   subscriberfile = "./data/subscribers.csv"
   newzware_subscribers = Array.new
-  newzware_subscribers = CSV.parse(File.read(subscriberfile), headers: true, col_sep: ",")
+  newzware_subscribers = CSV.parse(File.read(subscriberfile), headers: true, col_sep: ",", liberal_parsing: true)
   
   # delete all records without email address
   newzware_subscribers.delete_if do |element|
