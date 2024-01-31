@@ -148,7 +148,7 @@ def merge_newzware_users_and_subscribers(newzware_users,newzware_subscribers)
       user_in_subscriber_array = newzware_subscribers.find{|a| (a['login_id'] == user['login_id'])}
     end
     if user_in_subscriber_array.nil?  # user is not currently a subscriber thus only registered or previous subscriber, add to array
-      newzware_users_and_subscribers.push([user['account'],user['fname'],user['lname'],user['email'],"","","","","","",user['user_type'],user['application'],user['created'],"","",user['created'],user['last_login'],"","","","",user['auth_last_date']])
+      newzware_users_and_subscribers.push([user['account'],user['fname'],user['lname'],user['email'],"","","","","","",user['user_type'],user['application'],user['created'],"","","",user['last_login'],"","","","",user['auth_last_date']])
       # puts user['email'] + "... appending to file "
     else
       # already in subscriber file, dont add again

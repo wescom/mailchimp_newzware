@@ -88,8 +88,12 @@ end
 
 def member_exists_in_list?(client, list_id, member_data)
   #puts member_data.inspect
-  response = client.lists.get_list_member(list_id, member_data["em_email"])
-  return true
+  if member_data["em_email"].length > 1
+    response = client.lists.get_list_member(list_id, member_data["em_email"])
+    return true
+  else
+    return false
+  end
 
   rescue MailchimpMarketing::ApiError => e
     return false
@@ -179,11 +183,67 @@ end
 def subscriber?(member_data)
   # returns whether member is a subscriber
   subscription_names = eval ENV['SUBSCRIPTION_NAMES']
-  if subscription_names[member_data["rr_del_meth"]].downcase.include?("register")  # ENV['SUBSCRIPTION_NAMES'] is a registered user
+  if subscription_names[member_data["rr_del_meth"]].downcase.include?("register") ||    # ENV['SUBSCRIPTION_NAMES'] is a registered user
+    subscription_names[member_data["rr_del_meth"]].downcase.include?("stopped")         # ENV['SUBSCRIPTION_NAMES'] is a stopped subscr
     return 'NO'
   else
     return 'YES'
   end
+end
+
+def get_current_subscriber_value(client, list_id, member_data)
+  # returns the member's current 'subscribers' value in MailChimp
+
+  if member_exists_in_list?(client, list_id, member_data)
+    # get all interests settings for the member (true/false values)
+    email = Digest::MD5.hexdigest member_data["em_email"].downcase
+    member_info = client.lists.get_list_member(list_id, email)
+    member_interests_values = member_info["interests"]
+    #puts member_interests_values
+  
+    # create hash of all group 'Subscription' interest_ids available
+    group_id = get_group_id_of_name(client, list_id, ENV['MAILCHIMP_SUBSCRIPTION_GROUP_NAME'])
+    group_interests = client.lists.list_interest_category_interests(list_id, group_id,opts = {count: 100}) # find all interests of group_id
+    #puts group_interests["interests"].inspect
+  
+    # find member subscription interests set to True
+    member_subscription = ""
+    group_interests["interests"].map do |interest|
+      if member_interests_values[interest["id"]]
+        member_subscription = member_subscription + interest["name"]
+      end
+    end
+    #puts member_subscription
+    return member_subscription
+  else
+    return ""
+  end
+  
+  rescue MailchimpMarketing::ApiError => e
+    puts "Function: get_current_subscriber_value failed"
+    puts "GroupID Error: #{e}"  
+    exit!
+end
+
+def member_past_gracedate(client, list_id, member_data)
+  # check if member stopped subscription, is GRACEDATE past?
+  email = Digest::MD5.hexdigest member_data["em_email"].downcase
+  member = client.lists.get_list_member(list_id, email)
+  if !member['merge_fields']['GRACEDATE'].empty?
+    # gracedate exists
+    gracedate = Date.strptime(member['merge_fields']['GRACEDATE'], '%Y-%m-%d')
+    today = Date.strptime(Time.now.strftime('%Y-%m-%d'), '%Y-%m-%d')
+    stopped = (today - gracedate).to_i > 0 ? true : false
+  else
+    # gracedate does not exist
+    stopped = false
+  end
+  return stopped
+  
+  rescue MailchimpMarketing::ApiError => e
+    puts "Function: member_past_gracedate failed"
+    puts "GroupID Error: #{e}"  
+    exit!
 end
 
 def activate_member_marketing_groups(client, list_id, member_data)
@@ -213,6 +273,7 @@ def activate_member_marketing_groups(client, list_id, member_data)
   end
   
   rescue MailchimpMarketing::ApiError => e
+    puts "Function: activate_member_marketing_groups failed"
     puts "GroupID Error: #{e}"  
     exit!
 end
@@ -252,19 +313,26 @@ def activate_default_newsletter_groups(client, list_id, member_data, group_name)
   end
   
   rescue MailchimpMarketing::ApiError => e
+    puts "Function: activate_default_newsletter_groups failed"
     puts "GroupID Error: #{e}"  
     exit!
 end
 
 def update_member_subscription_group(client, list_id, member_data)
-
   # updates existing member's subscription group
   email = Digest::MD5.hexdigest member_data["em_email"].downcase
   if member_exists_in_list?(client, list_id, member_data)
+    # get current 'subscription' setting in MailChimp
+    current_subscription = get_current_subscriber_value(client, list_id, member_data)
+    # update 'past_subscription' field ONLY if subscription changes
+    merge_fields = {}
+    if current_subscription != member_data["service_name"]  # new subscription setting?
+      merge_fields["PASTSUBSC"] = current_subscription # save old subscription setting
+    end
+
     # create hash of interest_ids; set all to false except member's subscription group
     group_id = get_group_id_of_name(client, list_id, ENV['MAILCHIMP_SUBSCRIPTION_GROUP_NAME'])
     group_interests = client.lists.list_interest_category_interests(list_id, group_id,opts = {count: 100}) # find all interests of group_id
-
     interests_hash_to_set = {}
     keys_to_extract = ["id", "name"]
     service_name_matches_an_interest = false  # keep track if subscription service_name matches at least one interest
@@ -288,13 +356,15 @@ def update_member_subscription_group(client, list_id, member_data)
     member = client.lists.update_list_member(
         list_id,
         member_data["em_email"],
-        :interests => interests_hash_to_set
+        :interests => interests_hash_to_set,
+        :merge_fields => merge_fields
     )
   else
     puts "Member NOT FOUND in MailChimp"
   end
   
   rescue MailchimpMarketing::ApiError => e
+    puts "Function: update_member_subscription_group failed"
     puts "GroupID Error: #{e}"  
     exit!
 end
@@ -302,6 +372,7 @@ end
 def add_or_update_member_record(client, list_id, member_data, index)
   
   # set merge_fields to update in MailChimp member record
+  #puts member_data.inspect
   merge_fields = {}
   merge_fields["MMERGE16"] = member_data["occ_id"] unless member_data["occ_id"].nil?
   merge_fields["FNAME"] = member_data["occ_fname"].capitalize unless member_data["occ_fname"].nil?
@@ -326,6 +397,7 @@ def add_or_update_member_record(client, list_id, member_data, index)
   #puts member_data["service_name"]
   merge_fields["MMERGE25"] = subscriber?(member_data)
 
+  puts "*********"
   #puts merge_fields.inspect
   #puts member_data["em_email"] + ' - ' + merge_fields["FNAME"].to_s + ' ' + merge_fields["LNAME"].to_s
   #puts "Sub?     " + member_data["service_name"] + ' = ' + merge_fields["MMERGE25"]
@@ -334,6 +406,16 @@ def add_or_update_member_record(client, list_id, member_data, index)
   email = Digest::MD5.hexdigest member_data["em_email"].downcase
   if member_exists_in_list?(client, list_id, member_data)
     # existing member record
+    
+    # check if member stopped subscription, is GRACEDATE past?
+    past_grace = member_past_gracedate(client, list_id, member_data)
+    #puts past_grace
+    #puts "member_data..."
+    #puts member_data.inspect
+    #puts member_data["service_name"]
+    #puts "merge_fields..."
+    #puts merge_fields.inspect
+    
     #puts 'Email found in Mailchimp'
     member = client.lists.update_list_member(
         list_id,
@@ -343,6 +425,7 @@ def add_or_update_member_record(client, list_id, member_data, index)
       )
   else
     # new member record
+    
     #puts 'Email not found in Mailchimp'
     member = client.lists.set_list_member(
         list_id,
@@ -361,7 +444,6 @@ def add_or_update_member_record(client, list_id, member_data, index)
   update_member_subscription_group(client, list_id, member_data)
 
   member = client.lists.get_list_member(list_id, email)
-
   if $logs == 'detail'
     if merge_fields["MMERGE25"] == "YES"
       puts "#{index+1} - Subscriber added/updated in MailChimp:  " + member['email_address'] + " - " + member['full_name'] + " - " + member_data["service_name"]
@@ -443,6 +525,7 @@ eomedia_sites.each do |site|
 
     #puts member.inspect
     add_or_update_member_record(mailchimp_client, list_id, member, index)
+
   end
   
 end
