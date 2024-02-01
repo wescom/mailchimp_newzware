@@ -397,7 +397,6 @@ def add_or_update_member_record(client, list_id, member_data, index)
   #puts member_data["service_name"]
   merge_fields["MMERGE25"] = subscriber?(member_data)
 
-  puts "*********"
   #puts merge_fields.inspect
   #puts member_data["em_email"] + ' - ' + merge_fields["FNAME"].to_s + ' ' + merge_fields["LNAME"].to_s
   #puts "Sub?     " + member_data["service_name"] + ' = ' + merge_fields["MMERGE25"]
