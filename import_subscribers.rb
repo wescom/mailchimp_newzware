@@ -13,7 +13,8 @@ def connect_mailchimp()
   client = MailchimpMarketing::Client.new()
   client.set_config({
     :api_key => ENV['MAILCHIMP_API'],
-    :server => ENV['MAILCHIMP_SERVER']
+    :server => ENV['MAILCHIMP_SERVER'],
+    :read_timeout => 120
   })
   result = client.ping.get()
   #puts result
@@ -89,7 +90,9 @@ end
 def member_exists_in_list?(client, list_id, member_data)
   #puts member_data.inspect
   if member_data["em_email"].length > 1
-    response = client.lists.get_list_member(list_id, member_data["em_email"])
+    response = client.lists.get_list_member(list_id, member_data["em_email"], :fields => ["email_address"])
+    #puts response
+    
     return true
   else
     return false
@@ -407,7 +410,7 @@ def add_or_update_member_record(client, list_id, member_data, index)
     # existing member record
     
     # check if member stopped subscription, is GRACEDATE past?
-    past_grace = member_past_gracedate(client, list_id, member_data)
+    #past_grace = member_past_gracedate(client, list_id, member_data)
     #puts past_grace
     #puts "member_data..."
     #puts member_data.inspect
@@ -442,12 +445,12 @@ def add_or_update_member_record(client, list_id, member_data, index)
   # update member's subscription group
   update_member_subscription_group(client, list_id, member_data)
 
-  member = client.lists.get_list_member(list_id, email)
+  member = client.lists.get_list_member(list_id, email, :fields => ["email_address","full_name"])
   if $logs == 'detail'
     if merge_fields["MMERGE25"] == "YES"
       puts "#{index+1} - Subscriber added/updated in MailChimp:  " + member['email_address'] + " - " + member['full_name'] + " - " + member_data["service_name"]
     else
-      puts "#{index+1} - Registered User added/updated in MailChimp:  " + member['email_address'] + " - " + member['full_name']
+      puts "#{index+1} - User added/updated in MailChimp:  " + member['email_address'] + " - " + member['full_name'] + " - " + member_data["service_name"]
     end
   end
   
@@ -456,7 +459,7 @@ def add_or_update_member_record(client, list_id, member_data, index)
       if merge_fields["MMERGE25"] == "YES"
         puts "#{index+1} - Subscriber update FAILED in MailChimp:  " + member_data["em_email"] + " - " + get_full_name(member_data)
       else
-        puts "#{index+1} - Registered User update FAILED in MailChimp:  " + member_data["em_email"] + " - " + get_full_name(member_data)
+        puts "#{index+1} - User update FAILED in MailChimp:  " + member_data["em_email"] + " - " + get_full_name(member_data) + " - " + member_data["service_name"]
       end
       puts "Update Member Error: #{e}"
     end
@@ -521,8 +524,10 @@ eomedia_sites.each do |site|
     #if index % 100 == 0
     #  mailchimp_client = connect_mailchimp()
     #end
-
-    #puts member.inspect
+    
+#email = Digest::MD5.hexdigest member["em_email"].downcase
+#member = mailchimp_client.lists.get_list_member(list_id, email, :fields => ["email_address","full_name"])
+#    puts member.inspect
     add_or_update_member_record(mailchimp_client, list_id, member, index)
 
   end
