@@ -535,12 +535,7 @@ eomedia_sites.each do |site|
     #  mailchimp_client = connect_mailchimp()
     #end
     
-#email = Digest::MD5.hexdigest member["em_email"].downcase
-#member = mailchimp_client.lists.get_list_member(list_id, email, :fields => ["email_address","full_name"])
-#    puts member.inspect
     add_or_update_member_record(mailchimp_client, list_id, member, index)
-
   end
-  
 end
 
