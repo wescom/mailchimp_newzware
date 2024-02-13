@@ -162,12 +162,11 @@ def merge_newzware_users_and_subscribers(newzware_users,newzware_subscribers)
   return newzware_users_and_subscribers
 end
 
-def filter_records_by_date(newzware_users_and_subscribers)
+def filter_records_by_date(records)
   # filter array to new records based on $past_days_to_import
   if !$ignore_past_days_to_import
-    puts "Filter records to past " + $past_days_to_import + " days"
     todays_date = Date.parse(DateTime.now.to_s)
-    newzware_users_and_subscribers.delete_if do |element|
+    records.delete_if do |element|
       if !element["last_change_date"] || element["last_change_date"].empty?
         import_by_change_date = true
       else
@@ -190,14 +189,14 @@ def filter_records_by_date(newzware_users_and_subscribers)
     end
   end
 
-  puts "   * records ready for import: " + newzware_users_and_subscribers.length.to_s
-  return newzware_users_and_subscribers
+  puts "   * filtered to past " + $past_days_to_import + " days: " + records.length.to_s
+  return records
 end
 
-def fix_bad_record_data(newzware_users_and_subscribers)
+def fix_bad_record_data(records)
   # clean up bad data in records
   puts "Clean bad record data"
-  newzware_users_and_subscribers.each do |element|
+  records.each do |element|
     #remove any whitespace from emails
     element['em_email'] = element['em_email'].gsub(/\s+/, "")
   end

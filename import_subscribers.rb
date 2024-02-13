@@ -510,16 +510,17 @@ eomedia_sites.each do |site|
 
   # read downloaded domain records into array for import
   newzware_subscribers = get_newzware_subscribers(domain)   # returns array of subscribers for domain
+  newzware_subscribers = filter_records_by_date(newzware_subscribers) # filter records by date
   newzware_users = get_newzware_users(domain)   # returns array of registered users for domain
-
+  newzware_users = filter_records_by_date(newzware_users) # filter records by date
+  
   # merge registered users and subscribers into single array for import
   newzware_users_and_subscribers = merge_newzware_users_and_subscribers(newzware_users,newzware_subscribers)
 
-  # filter records by date
-  newzware_users_and_subscribers = filter_records_by_date(newzware_users_and_subscribers)
-  
   # Clean up record data
   newzware_users_and_subscribers = fix_bad_record_data(newzware_users_and_subscribers)
+  
+  puts "Total records ready for import = " + newzware_users_and_subscribers.length.to_s
   
   # Update MailChimp with new subscriber record changes
   mailchimp_client = connect_mailchimp()  # connect to mailchimp API
