@@ -163,23 +163,23 @@ def merge_newzware_users_and_subscribers(newzware_users,newzware_subscribers)
 end
 
 def filter_records_by_date(newzware_users_and_subscribers)
-  # filter array to new records based on ENV['DAYS_PAST_TO_IMPORT']
-  if ENV['IGNORE_DAYS_PAST_TO_IMPORT'] == 'false'
-    puts "Filter records to past " + ENV['DAYS_PAST_TO_IMPORT'] + " days"
+  # filter array to new records based on $past_days_to_import
+  if !$ignore_past_days_to_import
+    puts "Filter records to past " + $past_days_to_import + " days"
     todays_date = Date.parse(DateTime.now.to_s)
     newzware_users_and_subscribers.delete_if do |element|
       if !element["last_change_date"] || element["last_change_date"].empty?
         import_by_change_date = true
       else
         change_date = Date.parse(element["last_change_date"])
-        import_by_change_date = (todays_date - change_date).to_i > ENV['DAYS_PAST_TO_IMPORT'].to_i
+        import_by_change_date = (todays_date - change_date).to_i > $past_days_to_import.to_i
       end
 
       if !element["last_login"] || element["last_login"].empty?
         import_by_login_date = true
       else
         login_date = Date.parse(element["last_login"])
-        import_by_login_date = (todays_date - login_date).to_i > ENV['DAYS_PAST_TO_IMPORT'].to_i
+        import_by_login_date = (todays_date - login_date).to_i > $past_days_to_import.to_i
       end
       
       if import_by_change_date && import_by_login_date

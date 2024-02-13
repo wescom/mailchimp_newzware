@@ -476,12 +476,16 @@ end
 #  -> supply variable -logs=detail for info on each imported record.
 puts "Script parameters available: \n"
 puts "-logs=detail (summary is the default)"
-puts "-site=<site code> (ie. BB CP DA ... ALL)"
+puts "-site=<site_code> (ie. BB CP DA ... ALL)"
+puts "-days=# (# of past days to import)"
+puts "-ignore_days=# (ignore past days and import ALL records, default=false)"
 puts "\n"
 
 args = Hash[ ARGV.join(' ').scan(/--?([^=\s]+)(?:=(\S+))?/) ]
 $logs = args['logs']
 $site = args['site']
+$past_days_to_import = args['days']
+$ignore_past_days_to_import = args['ignore_days'] == 'true' ? true : false
 
 download_Newzware_FTP_files()  #connect to Newzware FTP and download files
 
