@@ -474,18 +474,23 @@ end
 
 # save all paramters passed to script
 #  -> supply variable -logs=detail for info on each imported record.
-puts "Script parameters available: -logs=detail"
+puts "Script parameters available: \n"
+puts "-logs=detail (summary is the default)"
+puts "-site=<site code> (ie. BB CP DA ... ALL)"
+puts "\n"
+
 args = Hash[ ARGV.join(' ').scan(/--?([^=\s]+)(?:=(\S+))?/) ]
 $logs = args['logs']
+$site = args['site']
 
 download_Newzware_FTP_files()  #connect to Newzware FTP and download files
 
 # Get site codes and associated domains
 eomedia_sites = eval ENV['EOMEDIA_SITES'] 
-if ENV['SITE_TO_IMPORT'] != 'ALL'
+if $site != 'ALL'
   # filter array to only sites to import
   eomedia_sites.delete_if do |site|
-    if ENV['SITE_TO_IMPORT'] != site
+    if $site != site
       true
     else
       false
