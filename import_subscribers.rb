@@ -475,19 +475,27 @@ end
 # save all paramters passed to script
 #  -> supply variable -logs=detail for info on each imported record.
 puts "Script parameters available: \n"
-puts "-logs=detail (summary is the default)"
-puts "-site=<site_code> (ie. BB CP DA ... ALL)"
-puts "-days=# (# of past days to import)"
-puts "-ignore_days=# (ignore past days and import ALL records, default=false)"
+puts "-logs=detail (default=summary)"
+puts "-site=<site_code> (ie. BB CP DA ... ALL, *required)"
+puts "-days=# (# of past days to import, *required)"
+puts "-ignore_days=true/false (ignore past days and import ALL records, default=false)"
+puts "-no_download=true/false (do not download new files from Newzware, default=false)"
+puts "-import_subs_only=true/false (import only subscribers, default=false)"
 puts "\n"
 
 args = Hash[ ARGV.join(' ').scan(/--?([^=\s]+)(?:=(\S+))?/) ]
 $logs = args['logs']
 $site = args['site']
-$past_days_to_import = args['days']
+$past_days_to_import = args['days'] 
 $ignore_past_days_to_import = args['ignore_days'] == 'true' ? true : false
+$no_download = args['no_download'] == 'true' ? true : false
+$import_subs_only = args['import_subs_only'] == 'true' ? true : false
 
-download_Newzware_FTP_files()  #connect to Newzware FTP and download files
+if $no_download
+  puts 'skipping download'
+else
+  download_Newzware_FTP_files()  #connect to Newzware FTP and download files
+end
 
 # Get site codes and associated domains
 eomedia_sites = eval ENV['EOMEDIA_SITES'] 
@@ -511,8 +519,13 @@ eomedia_sites.each do |site|
   # read downloaded domain records into array for import
   newzware_subscribers = get_newzware_subscribers(domain)   # returns array of subscribers for domain
   newzware_subscribers = filter_records_by_date(newzware_subscribers) # filter records by date
-  newzware_users = get_newzware_users(domain)   # returns array of registered users for domain
-  newzware_users = filter_records_by_date(newzware_users) # filter records by date
+
+  if $import_subs_only == false    # skip if importing subs only
+    newzware_users = get_newzware_users(domain)   # returns array of registered users for domain
+    newzware_users = filter_records_by_date(newzware_users) # filter records by date
+  else
+    newzware_users = []
+  end
   
   # merge registered users and subscribers into single array for import
   newzware_users_and_subscribers = merge_newzware_users_and_subscribers(newzware_users,newzware_subscribers)
