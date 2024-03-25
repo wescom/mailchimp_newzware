@@ -325,6 +325,17 @@ def update_member_subscription_group(client, list_id, member_data)
   # updates existing member's subscription group
   email = Digest::MD5.hexdigest member_data["em_email"].downcase
   if member_exists_in_list?(client, list_id, member_data)
+    # exit if 'service_name' is Stopped and has not reached grace date
+    if (member_data["service_name"] == 'Stopped Subscription')
+      if !member_data["sp_grace_end"].empty? && (Date.strptime(member_data["sp_grace_end"],"%Y-%m-%d") > DateTime.now)
+        puts "*** " + member_data["em_email"] + " marked as STOPPED SUBSCRIPTION but did not reach grace_end: " + member_data["sp_grace_end"].to_s
+        puts "     Not updating subscription on record"
+        return
+      #else  
+        #puts member_data["em_email"] + " - " + member_data["service_name"] + " GraceDate: " + member_data["sp_grace_end"].to_s + " StopDate: " + member_data["sp_paid_thru"].to_s
+      end
+    end
+    
     # get current 'subscription' setting in MailChimp
     current_subscription = get_current_subscriber_value(client, list_id, member_data)
     # update 'past_subscription' field ONLY if subscription changes
