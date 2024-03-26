@@ -331,8 +331,8 @@ def update_member_subscription_group(client, list_id, member_data)
         puts "*** " + member_data["em_email"] + " marked as STOPPED SUBSCRIPTION but did not reach grace_end: " + member_data["sp_grace_end"].to_s
         puts "     Not updating subscription on record"
         return
-      #else  
-        #puts member_data["em_email"] + " - " + member_data["service_name"] + " GraceDate: " + member_data["sp_grace_end"].to_s + " StopDate: " + member_data["sp_paid_thru"].to_s
+      else  
+        puts member_data["em_email"] + " - " + member_data["service_name"] + " GraceDate: " + member_data["sp_grace_end"].to_s + " StopDate: " + member_data["sp_paid_thru"].to_s
       end
     end
     
@@ -529,7 +529,7 @@ eomedia_sites.each do |site|
 
   # read downloaded domain records into array for import
   newzware_subscribers = get_newzware_subscribers(domain)   # returns array of subscribers for domain
-  newzware_subscribers = filter_records_by_date(newzware_subscribers) # filter records by date
+  # do NOT filter by date at this point, otherwise reg users will not find a matching subscriber record
 
   if $import_subs_only == false    # skip if importing subs only
     newzware_users = get_newzware_users(domain)   # returns array of registered users for domain
@@ -540,6 +540,7 @@ eomedia_sites.each do |site|
   
   # merge registered users and subscribers into single array for import
   newzware_users_and_subscribers = merge_newzware_users_and_subscribers(newzware_users,newzware_subscribers)
+  newzware_users_and_subscribers = filter_records_by_date(newzware_users_and_subscribers) # filter records by date
 
   # Clean up record data
   newzware_users_and_subscribers = fix_bad_record_data(newzware_users_and_subscribers)
